@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,7 +58,7 @@ func TestLoadConfig(t *testing.T) {
 			t.Fatalf("Failed to marshal config: %v", err)
 		}
 
-		if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
+		if err := os.WriteFile(configPath, data, 0644); err != nil {
 			t.Fatalf("Failed to write config file: %v", err)
 		}
 
@@ -92,7 +91,7 @@ func TestLoadConfig(t *testing.T) {
 		configPath := filepath.Join(configDir, "config.yaml")
 		invalidData := "invalid: yaml: content: ["
 
-		if err := ioutil.WriteFile(configPath, []byte(invalidData), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte(invalidData), 0644); err != nil {
 			t.Fatalf("Failed to write config file: %v", err)
 		}
 
@@ -165,7 +164,7 @@ func TestCopyFile(t *testing.T) {
 	sourceFile := filepath.Join(tmpDir, "source.txt")
 	sourceContent := "Hello, World!\nThis is a test file."
 
-	if err := ioutil.WriteFile(sourceFile, []byte(sourceContent), 0644); err != nil {
+	if err := os.WriteFile(sourceFile, []byte(sourceContent), 0644); err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
 
@@ -184,7 +183,7 @@ func TestCopyFile(t *testing.T) {
 		}
 
 		// Check file content
-		destContent, err := ioutil.ReadFile(destFile)
+		destContent, err := os.ReadFile(destFile)
 		if err != nil {
 			t.Fatalf("Failed to read destination file: %v", err)
 		}
@@ -237,11 +236,11 @@ func TestCopyDir(t *testing.T) {
 	file1 := filepath.Join(sourceDir, "file1.txt")
 	file2 := filepath.Join(sourceDir, "subdir", "file2.txt")
 
-	if err := ioutil.WriteFile(file1, []byte("content1"), 0644); err != nil {
+	if err := os.WriteFile(file1, []byte("content1"), 0644); err != nil {
 		t.Fatalf("Failed to create file1: %v", err)
 	}
 
-	if err := ioutil.WriteFile(file2, []byte("content2"), 0644); err != nil {
+	if err := os.WriteFile(file2, []byte("content2"), 0644); err != nil {
 		t.Fatalf("Failed to create file2: %v", err)
 	}
 
@@ -272,8 +271,8 @@ func TestCopyDir(t *testing.T) {
 		}
 
 		// Check file contents
-		content1, _ := ioutil.ReadFile(destFile1)
-		content2, _ := ioutil.ReadFile(destFile2)
+		content1, _ := os.ReadFile(destFile1)
+		content2, _ := os.ReadFile(destFile2)
 
 		if string(content1) != "content1" {
 			t.Errorf("file1.txt content mismatch. Expected: 'content1', got: %q", string(content1))
@@ -293,7 +292,7 @@ func TestFastCopy(t *testing.T) {
 		sourceFile := filepath.Join(tmpDir, "source_file.txt")
 		destFile := filepath.Join(tmpDir, "dest_file.txt")
 
-		if err := ioutil.WriteFile(sourceFile, []byte("test content"), 0644); err != nil {
+		if err := os.WriteFile(sourceFile, []byte("test content"), 0644); err != nil {
 			t.Fatalf("Failed to create source file: %v", err)
 		}
 
@@ -318,7 +317,7 @@ func TestFastCopy(t *testing.T) {
 		sourceFile := filepath.Join(tmpDir, "source_move.txt")
 		destFile := filepath.Join(tmpDir, "dest_move.txt")
 
-		if err := ioutil.WriteFile(sourceFile, []byte("test content"), 0644); err != nil {
+		if err := os.WriteFile(sourceFile, []byte("test content"), 0644); err != nil {
 			t.Fatalf("Failed to create source file: %v", err)
 		}
 
@@ -349,7 +348,7 @@ func TestFastCopy(t *testing.T) {
 
 		// Create a file in source directory
 		testFile := filepath.Join(sourceDir, "test.txt")
-		if err := ioutil.WriteFile(testFile, []byte("test"), 0644); err != nil {
+		if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
 			t.Fatalf("Failed to create test file: %v", err)
 		}
 
@@ -375,11 +374,11 @@ func TestFastCopy(t *testing.T) {
 		sourceFile := filepath.Join(tmpDir, "source_exists.txt")
 		destFile := filepath.Join(tmpDir, "dest_exists.txt")
 
-		if err := ioutil.WriteFile(sourceFile, []byte("source"), 0644); err != nil {
+		if err := os.WriteFile(sourceFile, []byte("source"), 0644); err != nil {
 			t.Fatalf("Failed to create source file: %v", err)
 		}
 
-		if err := ioutil.WriteFile(destFile, []byte("dest"), 0644); err != nil {
+		if err := os.WriteFile(destFile, []byte("dest"), 0644); err != nil {
 			t.Fatalf("Failed to create dest file: %v", err)
 		}
 
@@ -402,7 +401,7 @@ func BenchmarkCopyFile(b *testing.B) {
 	sourceFile := filepath.Join(tmpDir, "benchmark_source.txt")
 	content := strings.Repeat("Hello, World!\n", 1000) // ~13KB
 
-	if err := ioutil.WriteFile(sourceFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(sourceFile, []byte(content), 0644); err != nil {
 		b.Fatalf("Failed to create source file: %v", err)
 	}
 
