@@ -2,7 +2,7 @@
 
 A fast and efficient tool to move files/directories to a storage location and create symbolic links at the original location, helping you save disk space while maintaining file accessibility.
 
-![简体中文](README.zh.md)
+[简体中文](README.zh.md)
 
 ## Features
 
