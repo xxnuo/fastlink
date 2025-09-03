@@ -1,25 +1,8 @@
-# FastLink 配置文件样例
-#
-# 这个文件展示了 FastLink 工具的所有可用配置选项
-# 复制这个文件到 ~/.config/fastlink/config.yaml 并根据需要修改
+# Default destination directory
+# Files will be moved here when no destination is specified
+destination: "/mnt/storage/fastlink"
 
-# 默认目标目录
-# 当没有在命令行指定目标目录时，文件/目录将被移动到这里
-# 支持相对路径和绝对路径
-# 示例：
-#   destination: "/home/username/storage"  # 绝对路径
-#   destination: "~/Documents/archive"     # 使用 ~ 表示用户目录
-#   destination: "./backup"                # 相对路径
-destination: "/mnt/data/fastlink"
-
-# 是否保留原文件模式
-# true:  复制文件到目标位置，保留原文件不变
-# false: 移动文件到目标位置，在原位置创建软链接（默认行为）
-# 注意：命令行参数 -k 或 --keep 会覆盖这个设置
+# Keep original files by default
+# true:  Copy files, keep originals (no symbolic links created)
+# false: Move files, create symbolic links (default behavior)
 keep: false
-
-# 是否快速移动模式
-# true:  快速移动模式，直接一步操作移动文件到目标位置
-# false: 复制文件到目标位置，然后删除原文件（默认行为）
-# 注意：命令行参数 -m 或 --move 会覆盖这个设置
-move: false

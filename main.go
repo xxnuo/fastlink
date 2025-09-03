@@ -3,29 +3,25 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/fileflow"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
 	Destination string `yaml:"destination"`
 	Keep        bool   `yaml:"keep"`
-	Move        bool   `yaml:"move"`
 }
 
 func main() {
 	var keep bool
-	var move bool
 	flag.BoolVar(&keep, "k", false, "keep original file mode flag")
 	flag.BoolVar(&keep, "keep", false, "keep original file mode flag")
-	flag.BoolVar(&move, "m", false, "quick move mode flag")
-	flag.BoolVar(&move, "move", false, "quick move mode flag")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-m] [--move] [-k] [--keep] <source> [<destination>]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-k] [--keep] <source> [<destination>]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nQuickly move files/directories to a certain location and create soft links at the original location\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
@@ -54,10 +50,6 @@ func main() {
 		// Use config keep flag if not overridden by command line
 		if !keep {
 			keep = config.Keep
-		}
-		// Use config move flag if not overridden by command line
-		if !move {
-			move = config.Move
 		}
 	}
 
@@ -106,8 +98,8 @@ func main() {
 		finalDest = filepath.Join(destinationAbs, filepath.Base(sourceAbs))
 	}
 
-	// Copy/move the file or directory
-	if err := fastCopy(sourceAbs, finalDest, move); err != nil {
+	// Copy the file or directory
+	if err := fastCopy(sourceAbs, finalDest); err != nil {
 		fmt.Fprintf(os.Stderr, "Error copying file/directory: %v\n", err)
 		os.Exit(1)
 	}
@@ -171,11 +163,17 @@ func isSubPath(parent, child string) bool {
 	return !strings.HasPrefix(rel, "..")
 }
 
-func fastCopy(source, dest string, move bool) error {
-	// Get source info
-	sourceInfo, err := os.Stat(source)
+func fastCopy(source, dest string) error {
+	// Check if source is a symlink using Lstat
+	sourceInfo, err := os.Lstat(source)
 	if err != nil {
 		return fmt.Errorf("failed to stat source: %w", err)
+	}
+
+	// Skip if source is a symlink
+	if sourceInfo.Mode()&os.ModeSymlink != 0 {
+		fmt.Printf("Source is a symlink, skipping: %s\n", source)
+		return nil
 	}
 
 	// Check if destination already exists
@@ -183,105 +181,11 @@ func fastCopy(source, dest string, move bool) error {
 		return fmt.Errorf("destination already exists: %s", dest)
 	}
 
-	// Handle directory
-	if sourceInfo.IsDir() {
-		if err := copyDir(source, dest, move); err != nil {
-			return fmt.Errorf("failed to copy directory: %w", err)
-		}
-	} else {
-		// Handle file
-		if err := copyFile(source, dest); err != nil {
-			return fmt.Errorf("failed to copy file: %w", err)
-		}
-	}
-
-	// Remove source if this is a move operation
-	if move {
-		if err := os.RemoveAll(source); err != nil {
-			return fmt.Errorf("failed to remove source after move: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// copyFile copies a single file from source to destination
-func copyFile(source, dest string) error {
-	// Open source file
-	srcFile, err := os.Open(source)
+	// Handle file using fileflow
+	err = fileflow.Copy(source, dest)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to copy file: %w", err)
 	}
-	defer srcFile.Close()
-
-	// Get source file info
-	srcInfo, err := srcFile.Stat()
-	if err != nil {
-		return err
-	}
-
-	// Create destination file
-	dstFile, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	// Set destination file permissions to match source
-	if err := dstFile.Chmod(srcInfo.Mode()); err != nil {
-		return err
-	}
-
-	// Copy file content with buffer for efficiency
-	buffer := make([]byte, 64*1024) // 64KB buffer
-	if _, err := io.CopyBuffer(dstFile, srcFile, buffer); err != nil {
-		return err
-	}
-
-	// Sync to ensure data is written to disk
-	if err := dstFile.Sync(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// copyDir recursively copies a directory from source to destination
-func copyDir(source, dest string, move bool) error {
-	// Get source directory info
-	srcInfo, err := os.Stat(source)
-	if err != nil {
-		return err
-	}
-
-	// Create destination directory with same permissions
-	if err := os.MkdirAll(dest, srcInfo.Mode()); err != nil {
-		return err
-	}
-
-	// Read source directory entries
-	entries, err := os.ReadDir(source)
-	if err != nil {
-		return err
-	}
-
-	// Copy each entry
-	for _, entry := range entries {
-		srcPath := filepath.Join(source, entry.Name())
-		destPath := filepath.Join(dest, entry.Name())
-
-		if entry.IsDir() {
-			// Recursively copy subdirectory
-			if err := copyDir(srcPath, destPath, false); err != nil {
-				return err
-			}
-		} else {
-			// Copy file
-			if err := copyFile(srcPath, destPath); err != nil {
-				return err
-			}
-		}
-	}
-
+	fmt.Printf("File copied to: %s\n", dest)
 	return nil
 }

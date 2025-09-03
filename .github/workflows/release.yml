@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g., v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Windows
+          - goos: windows
+            goarch: amd64
+            suffix: .exe
+          - goos: windows
+            goarch: 386
+            suffix: .exe
+          - goos: windows
+            goarch: arm64
+            suffix: .exe
+          # Linux
+          - goos: linux
+            goarch: amd64
+            suffix: ""
+          - goos: linux
+            goarch: 386
+            suffix: ""
+          - goos: linux
+            goarch: arm64
+            suffix: ""
+          - goos: linux
+            goarch: arm
+            suffix: ""
+          - goos: linux
+            goarch: mips64
+            suffix: ""
+          - goos: linux
+            goarch: mips64le
+            suffix: ""
+          - goos: linux
+            goarch: ppc64
+            suffix: ""
+          - goos: linux
+            goarch: ppc64le
+            suffix: ""
+          - goos: linux
+            goarch: s390x
+            suffix: ""
+          # macOS
+          - goos: darwin
+            goarch: amd64
+            suffix: ""
+          - goos: darwin
+            goarch: arm64
+            suffix: ""
+          # FreeBSD
+          - goos: freebsd
+            goarch: amd64
+            suffix: ""
+          - goos: freebsd
+            goarch: 386
+            suffix: ""
+          - goos: freebsd
+            goarch: arm64
+            suffix: ""
+          # OpenBSD
+          - goos: openbsd
+            goarch: amd64
+            suffix: ""
+          - goos: openbsd
+            goarch: 386
+            suffix: ""
+          - goos: openbsd
+            goarch: arm64
+            suffix: ""
+          # NetBSD
+          - goos: netbsd
+            goarch: amd64
+            suffix: ""
+          - goos: netbsd
+            goarch: 386
+            suffix: ""
+          - goos: netbsd
+            goarch: arm64
+            suffix: ""
+          # Solaris
+          - goos: solaris
+            goarch: amd64
+            suffix: ""
+          # Plan9
+          - goos: plan9
+            goarch: amd64
+            suffix: ""
+          - goos: plan9
+            goarch: 386
+            suffix: ""
+          - goos: plan9
+            goarch: arm
+            suffix: ""
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.6"
+
+      - name: Get dependencies
+        run: go mod download
+
+      - name: Set release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "release_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "release_tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          BINARY_NAME="fastlink-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}"
+          go build -ldflags="-s -w" -o "$BINARY_NAME" main.go
+
+          # Create archive
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip "${BINARY_NAME%.exe}.zip" "$BINARY_NAME"
+            echo "ASSET_PATH=${BINARY_NAME%.exe}.zip" >> $GITHUB_ENV
+          else
+            tar -czf "$BINARY_NAME.tar.gz" "$BINARY_NAME"
+            echo "ASSET_PATH=$BINARY_NAME.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+          files: |
+            fastlink-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix == '.exe' && '.zip' || '.tar.gz' }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
